@@ -61,20 +61,21 @@ def parse_args():
     
     return args
 
-def run_training(data_type="screw",
-                 model_dir="models",
-                 epochs=256,
-                 pretrained=True,
-                 test_epochs=10,
-                 freeze_resnet=20,
-                 learninig_rate=0.03,
-                 optim_name="SGD",
-                 batch_size=64,
-                 head_layer=8,
-                 cutpate_type=CutPasteNormal,
-                 device = "cuda",
-                 workers=8,
-                 size = 256):
+def gpu_check():
+    if torch.cuda.is_available() == True:
+        print(f"CUDA available : {blue(torch.cuda.is_available())}")
+        print(f"PyTorch version: {highlight(torch.__version__)}")
+        print(f"CUDA device count: {highlight(torch.cuda.device_count())}")
+        print(f"CUDA current device index: {highlight(torch.cuda.current_device())}")
+        print(f"CUDA device name: {highlight(torch.cuda.get_device_name(0))}")
+    else:
+        print(f"CUDA available : {red({torch.cuda.is_available()})}")
+
+    # device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    return 'cuda' if torch.cuda.is_available() else 'cpu'
+
+def run_training(data_type="screw", model_dir="models", epochs=256, pretrained=True, test_epochs=10, freeze_resnet=20, learninig_rate=0.03,
+                 optim_name="SGD", batch_size=64, head_layer=8, cutpate_type=CutPasteNormal, device = "cuda", workers=8, size = 256):
     torch.multiprocessing.freeze_support()
     # TODO: use script params for hyperparameter
     # Temperature Hyperparameter currently not used
@@ -214,47 +215,10 @@ def run_training(data_type="screw",
     torch.save(model.state_dict(), model_dir / f"{model_name}.tch")
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Training defect detection as described in the CutPaste Paper.')
-    parser.add_argument('--type', default="all",
-                        help='MVTec defection dataset type to train seperated by , (default: "all": train all defect types)')
-
-    parser.add_argument('--epochs', default=256, type=int,
-                        help='number of epochs to train the model , (default: 256)')
+    device = gpu_check()
     
-    parser.add_argument('--model_dir', default="models",
-                        help='output folder of the models , (default: models)')
+    args = parse_args()
     
-    parser.add_argument('--no-pretrained', dest='pretrained', default=True, action='store_false',
-                        help='use pretrained values to initalize ResNet18 , (default: True)')
-    
-    parser.add_argument('--test_epochs', default=10, type=int,
-                        help='interval to calculate the auc during trainig, if -1 do not calculate test scores, (default: 10)')                  
-
-    parser.add_argument('--freeze_resnet', default=20, type=int,
-                        help='number of epochs to freeze resnet (default: 20)')
-    
-    parser.add_argument('--lr', default=0.03, type=float,
-                        help='learning rate (default: 0.03)')
-
-    parser.add_argument('--optim', default="sgd",
-                        help='optimizing algorithm values:[sgd, adam] (dafault: "sgd")')
-
-    parser.add_argument('--batch_size', default=64, type=int,
-                        help='batch size, real batchsize is depending on cut paste config normal cutaout has effective batchsize of 2x batchsize (dafault: "64")')   
-
-    parser.add_argument('--head_layer', default=1, type=int,
-                    help='number of layers in the projection head (default: 1)')
-    
-    parser.add_argument('--variant', default="3way", choices=['normal', 'scar', '3way', 'union'], help='cutpaste variant to use (dafault: "3way")')
-    
-    parser.add_argument('--cuda', default=False, type=str2bool,
-                    help='use cuda for training (default: False)')
-    
-    parser.add_argument('--workers', default=8, type=int, help="number of workers to use for data loading (default:8)")
-
-
-    args = parser.parse_args()
-    print(args)
     all_types = ['bottle',
              'cable',
              'capsule',
