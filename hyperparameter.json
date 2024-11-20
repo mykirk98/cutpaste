@@ -1,0 +1,7 @@
+{
+    "epochs" : 20,
+    "learning_rate" : 0.03,
+    "batch_size" : 64,
+    "workers" : 8,
+    "optimizer" : "SGD"
+}
