@@ -20,6 +20,7 @@ from eval import eval_model
 from utils import str2bool
 
 from colors import *
+import json
 
 def parse_args():
     """
@@ -73,6 +74,11 @@ def gpu_check():
 
     # device = 'cuda' if torch.cuda.is_available() else 'cpu'
     return 'cuda' if torch.cuda.is_available() else 'cpu'
+
+def load_config(config_file):
+    with open(file=config_file, mode="r") as file:
+        config = json.load(file)
+    return config
 
 def run_training(data_type="screw", model_dir="models", epochs=256, pretrained=True, test_epochs=10, freeze_resnet=20, learninig_rate=0.03,
                  optim_name="SGD", batch_size=64, head_layer=8, cutpate_type=CutPasteNormal, device = "cuda", workers=8, size = 256):
@@ -219,32 +225,15 @@ if __name__ == '__main__':
     
     args = parse_args()
     
-    all_types = ['bottle',
-             'cable',
-             'capsule',
-             'carpet',
-             'grid',
-             'hazelnut',
-             'leather',
-             'metal_nut',
-             'pill',
-             'screw',
-             'tile',
-             'toothbrush',
-             'transistor',
-             'wood',
-             'zipper']
+    config = load_config(config_file="config.json")
+    class_ = config['classes']
     
     if args.type == "all":
-        types = all_types
+        types = class_
     else:
         types = args.type.split(",")
     
-    variant_map = {'normal':CutPasteNormal, 'scar':CutPasteScar, '3way':CutPaste3Way, 'union':CutPasteUnion}
-    variant = variant_map[args.variant]
-    
-    device = "cuda" if args.cuda else "cpu"
-    print(f"using device: {device}")
+    variant = config['cutpaste']['variant']['normal']
     
     # create modle dir
     Path(args.model_dir).mkdir(exist_ok=True, parents=True)

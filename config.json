@@ -1,0 +1,13 @@
+{
+    "dataset": "mvtec",
+    "classes": ["bottle", "cable", "capsule", "carpet", "grid", "hazelnut", "leather", "metal_nut",
+                "pill", "screw", "tile", "toothbrush", "transistor", "wood", "zipper"],
+    "cutpaste":
+    {
+        "variant": {"normal": "CutPasteNormal",
+                    "scar": "CutPasteScar",
+                    "3way": "CutPaste3Way",
+                    "union": "CutPasteUnion"
+                }
+    }
+}
