@@ -1,14 +1,16 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision.models import resnet18
+from torchvision.models import resnet18, ResNet18_Weights
 
 
 class ProjectionNet(nn.Module):
-    def __init__(self, pretrained=True, head_layers=[512,512,512,512,512,512,512,512,128], num_classes=2):
+    def __init__(self, weights=True, head_layers=[512,512,512,512,512,512,512,512,128], num_classes=2):
         super(ProjectionNet, self).__init__()
-        #self.resnet18 = torch.hub.load('pytorch/vision:v0.9.0', 'resnet18', pretrained=pretrained)
-        self.resnet18 = resnet18(pretrained=pretrained)
+        # self.resnet18 = resnet18(weights=weights)
+        self.resnet18 = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
+        # model = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
+
 
         # create MLP head as seen in the code in: https://github.com/uoguelph-mlrg/Cutout/blob/master/util/cutout.py
         # TODO: check if this is really the right architecture

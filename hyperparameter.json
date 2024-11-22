@@ -3,5 +3,9 @@
     "learning_rate" : 0.03,
     "batch_size" : 64,
     "workers" : 8,
-    "optimizer" : "SGD"
+    "optimizer" : "sgd",
+    "temperature" : 0.2,
+    "weight_decay" : 0.00003,
+    "momentum" : 0.9
+
 }

@@ -24,10 +24,9 @@ cached_type = None
 
 def get_train_embeds(model, size, defect_type, transform, device):
     # train data / train kde
-    test_data = MVTecAT("Data", defect_type, size, transform=transform, mode="train")
+    test_data = MVTecAT(root_dir="/home/msis/Work/dataset/mvtec", defect_name=defect_type, size=size, transform=transform, mode="train")
 
-    dataloader_train = DataLoader(test_data, batch_size=64,
-                            shuffle=False, num_workers=0)
+    dataloader_train = DataLoader(test_data, batch_size=64, shuffle=False, num_workers=0)
     train_embed = []
     with torch.no_grad():
         for x in dataloader_train:
@@ -44,15 +43,19 @@ def eval_model(modelname, defect_type, device="cpu", save_plots=False, size=256,
     # TODO: cache is only nice during training. do we need it?
     if test_data_eval is None or cached_type != defect_type:
         cached_type = defect_type
-        test_transform = transforms.Compose([])
-        test_transform.transforms.append(transforms.Resize((size,size)))
-        test_transform.transforms.append(transforms.ToTensor())
-        test_transform.transforms.append(transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                                            std=[0.229, 0.224, 0.225]))
-        test_data_eval = MVTecAT("Data", defect_type, size, transform = test_transform, mode="test")
+        test_transform = transforms.Compose(transforms=[
+                                                transforms.Resize(size=(size, size)),
+                                                transforms.ToTensor(),
+                                                transforms.Normalize(mean=(0.485, 0.456, 0.406),
+                                                                    std=(0.229, 0.224, 0.225))
+        ])
+        # test_transform.transforms.append(transforms.Resize((size,size)))
+        # test_transform.transforms.append(transforms.ToTensor())
+        # test_transform.transforms.append(transforms.Normalize(mean=[0.485, 0.456, 0.406],
+        #                                                     std=[0.229, 0.224, 0.225]))
+        test_data_eval = MVTecAT(root_dir="/home/msis/Work/dataset/mvtec", defect_name=defect_type, size=size, transform = test_transform, mode="test")
 
-    dataloader_test = DataLoader(test_data_eval, batch_size=64,
-                                    shuffle=False, num_workers=0)
+    dataloader_test = DataLoader(dataset=test_data_eval, batch_size=64, shuffle=False, num_workers=0)
 
     # create model
     if model is None:

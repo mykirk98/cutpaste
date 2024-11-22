@@ -20,7 +20,7 @@ from utils import str2bool
 
 from colors import *
 import json
-from parser import parse_args
+from parser_ import parse_args
 
 def gpu_check():
     if torch.cuda.is_available() == True:
@@ -40,9 +40,9 @@ def load_config(config_file):
         config = json.load(file)
     return config
 
-def run_training(data_type, hyperParams, args, device, cutpate_type, size=256):
+def run_training(data_type, hyperParams, args, device, cutpaste_type, size=256):
     
-    epochs, lr, batch_size, workers, optim = hyperParams.values()
+    epochs, lr, batch_size, workers, optimizer, temperature, weight_decay, momentum = hyperParams.values()
     model_dir = Path(args.model_dir)
     test_epochs = args.test_epochs
     freeze_resnet = args.freeze_resnet
@@ -50,53 +50,57 @@ def run_training(data_type, hyperParams, args, device, cutpate_type, size=256):
     pretrained = str2bool(args.pretrained)
     
     
-    model_dir
-    torch.multiprocessing.freeze_support()
+    
+    
+    # model_dir
+    # torch.multiprocessing.freeze_support()
     # TODO: use script params for hyperparameter
     # Temperature Hyperparameter currently not used
-    temperature = 0.2
-
-    weight_decay = 0.00003
-    momentum = 0.9
-    #TODO: use f strings also for the date LOL
-    model_name = f"model-{data_type}" + '-{date:%Y-%m-%d_%H_%M_%S}'.format(date=datetime.datetime.now() )
+    
+    model_name = f"model-{data_type}" + '-{date:%Y-%m-%d_%H_%M_%S}'.format(date=datetime.datetime.now())
 
     #augmentation:
     min_scale = 1
 
     # create Training Dataset and Dataloader
-    after_cutpaste_transform = transforms.Compose([])
-    after_cutpaste_transform.transforms.append(transforms.ToTensor())
-    after_cutpaste_transform.transforms.append(transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                                                    std=[0.229, 0.224, 0.225]))
+    after_cutpaste_transform = transforms.Compose(transforms=[
+                                                    transforms.ToTensor(),
+                                                    transforms.Normalize(mean=(0.485, 0.456, 0.406),
+                                                                        std=(0.229, 0.224, 0.225))
+                                                            ])
 
-    train_transform = transforms.Compose([])
-    #train_transform.transforms.append(transforms.RandomResizedCrop(size, scale=(min_scale,1)))
-    train_transform.transforms.append(transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1))
-    # train_transform.transforms.append(transforms.GaussianBlur(int(size/10), sigma=(0.1,2.0)))
-    train_transform.transforms.append(transforms.Resize((size,size)))
-    train_transform.transforms.append(cutpate_type(transform = after_cutpaste_transform))
-    # train_transform.transforms.append(transforms.ToTensor())
+    train_transform = transforms.Compose(transforms=[
+                                            transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
+                                            transforms.Resize(size=(size, size)),
+                                            cutpaste_type(transform=after_cutpaste_transform)
+                                                    ])
+    # train_transform = transforms.Compose(transforms=[])
+    # #train_transform.transforms.append(transforms.RandomResizedCrop(size, scale=(min_scale,1)))
+    # train_transform.transforms.append(transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1))
+    # # train_transform.transforms.append(transforms.GaussianBlur(int(size/10), sigma=(0.1,2.0)))
+    # train_transform.transforms.append(transforms.Resize((size,size)))
+    # train_transform.transforms.append(cutpaste_type(transform=after_cutpaste_transform))
+    # # train_transform.transforms.append(transforms.ToTensor())
 
-    train_data = MVTecAT("Data", data_type, transform = train_transform, size=int(size * (1/min_scale)))
-    dataloader = DataLoader(Repeat(train_data, 3000), batch_size=batch_size, drop_last=True,
-                            shuffle=True, num_workers=workers, collate_fn=cut_paste_collate_fn,
-                            persistent_workers=True, pin_memory=True, prefetch_factor=5)
+    train_data = MVTecAT("/home/msis/Work/dataset/mvtec", data_type, transform = train_transform, size=int(size * (1/min_scale)))
+    dataloader = DataLoader(Repeat(train_data, 3000), batch_size=batch_size, drop_last=True, shuffle=True, num_workers=workers,
+                            collate_fn=cut_paste_collate_fn, persistent_workers=True, pin_memory=True, prefetch_factor=5)
 
     # Writer will output to ./runs/ directory by default
     writer = SummaryWriter(Path("logdirs") / model_name)
 
     # create Model:
     head_layers = [512]*head_layer+[128]
-    num_classes = 2 if cutpate_type is not CutPaste3Way else 3
-    model = ProjectionNet(pretrained=pretrained, head_layers=head_layers, num_classes=num_classes)
+    num_classes = 2 if cutpaste_type is not CutPaste3Way else 3
+    # model = ProjectionNet(pretrained=pretrained, head_layers=head_layers, num_classes=num_classes)
+    model = ProjectionNet(weights=pretrained, head_layers=head_layers, num_classes=num_classes)
     model.to(device)
 
     if freeze_resnet > 0 and pretrained:
         model.freeze_resnet()
 
     loss_fn = torch.nn.CrossEntropyLoss()
-    if optim == "sgd":
+    if optimizer == "sgd":
         optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum,  weight_decay=weight_decay)
         scheduler = CosineAnnealingWarmRestarts(optimizer, epochs)
         #scheduler = None
@@ -142,7 +146,7 @@ def run_training(data_type, hyperParams, args, device, cutpate_type, size=256):
         y = torch.arange(len(xs), device=device)
         y = y.repeat_interleave(xs[0].size(0))
         loss = loss_fn(logits, y)
-        
+
 
         # regulize weights:
         loss.backward()
@@ -177,12 +181,8 @@ def run_training(data_type, hyperParams, args, device, cutpate_type, size=256):
             # batch_embeds = torch.cat(batch_embeds)
             # print(batch_embeds.shape)
             model.eval()
-            roc_auc= eval_model(model_name, data_type, device=device,
-                                save_plots=False,
-                                size=size,
-                                show_training_data=False,
-                                model=model)
-                                #train_embed=batch_embeds)
+            roc_auc= eval_model(model_name, data_type, device=device, save_plots=False,
+                                size=size, show_training_data=False, model=model)
             model.train()
             writer.add_scalar('eval_auc', roc_auc, step)
 
@@ -203,6 +203,14 @@ if __name__ == '__main__':
         types = args.type.split(",")
     
     variant = config['cutpaste']['variant']['normal']
+    if variant == 'CutPasteNormal':
+        variant = CutPasteNormal
+    elif variant == 'CutPasteScar':
+        variant = CutPasteNormal
+    elif variant == 'CutPaste3Way':
+        variant = CutPaste3Way
+    elif variant == 'CutPasteUnion':
+        variant = CutPasteUnion
     
     # create modle dir
     Path(args.model_dir).mkdir(exist_ok=True, parents=True)
@@ -220,4 +228,4 @@ if __name__ == '__main__':
         #                 head_layer=args.head_layer,
         #                 device=device,
         #                 cutpate_type=variant)
-        run_training(data_type=data_type, device=device, hyperParams=hyperParams, args=args, cutpate_type=variant)
+        run_training(data_type=data_type, device=device, hyperParams=hyperParams, args=args, cutpaste_type=variant)
