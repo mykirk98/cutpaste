@@ -170,3 +170,4 @@ python run_training.py --epochs 10000 --test_epochs -1 --no-pretrained --cuda 1 
 - [ ] add option to finetune on EfficientNet(B4)
 - [ ] clean up parameters and move them into the arguments of the scripts
 - [ ] compare results of this reimplementation with the results of the paper
+
